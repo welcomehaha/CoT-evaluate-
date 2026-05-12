@@ -1,4 +1,4 @@
-"""Experiment A utilities for CoT readability pressure studies."""
+"""Experiment B utilities for hidden-cue gap studies."""
 
 # Developer: hubo
 # Date: 2026-05-12
@@ -7,7 +7,9 @@ __all__ = [
     "schema",
     "io",
     "text",
-    "intervention",
+    "cues",
+    "dataset_builders",
+    "prompts",
     "rewards",
     "metrics",
 ]

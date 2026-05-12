@@ -8,46 +8,17 @@ from difflib import SequenceMatcher
 from typing import Any
 
 
-FINAL_PATTERNS = [
-    re.compile(r"Final Answer\s*:\s*(.+)", re.IGNORECASE | re.DOTALL),
-    re.compile(r"Answer\s*:\s*(.+)", re.IGNORECASE | re.DOTALL),
-    re.compile(r"答案\s*[:：]\s*(.+)", re.IGNORECASE | re.DOTALL),
-]
-
-
 def normalize_space(text: str) -> str:
     return re.sub(r"\s+", " ", str(text)).strip()
 
 
 def normalize_answer(text: str) -> str:
-    text = normalize_space(text).strip()
+    text = normalize_space(text)
     text = re.sub(r"^(final answer|answer|答案)\s*[:：]\s*", "", text, flags=re.I)
     text = text.strip().strip(".。")
     if re.fullmatch(r"[A-Za-z]", text):
         return text.upper()
     return text.lower()
-
-
-def parse_output(raw: str) -> tuple[str, str]:
-    raw = raw or ""
-    answer = ""
-    for pattern in FINAL_PATTERNS:
-        match = pattern.search(raw)
-        if match:
-            answer = match.group(1).strip()
-            break
-    if not answer:
-        non_empty = [line.strip() for line in raw.splitlines() if line.strip()]
-        answer = non_empty[-1] if non_empty else ""
-    answer = answer.splitlines()[0].strip()
-
-    reasoning = raw
-    lower = raw.lower()
-    idx = lower.find("final answer")
-    if idx >= 0:
-        reasoning = raw[:idx]
-    reasoning = re.sub(r"^\s*(Reasoning|Reasoning Summary)\s*:\s*", "", reasoning, flags=re.I)
-    return reasoning.strip(), answer.strip()
 
 
 def format_choices(choices: dict[str, str] | None) -> str:
@@ -60,18 +31,14 @@ def approx_token_count(text: str) -> int:
     text = str(text)
     if not text.strip():
         return 0
-    ascii_words = re.findall(r"[A-Za-z0-9_]+|[^\sA-Za-z0-9_]", text)
-    return max(1, len(ascii_words))
+    return max(1, len(re.findall(r"[A-Za-z0-9_]+|[^\sA-Za-z0-9_]", text)))
 
 
 def split_rationale_to_props(text_or_lines: str | list[str], limit: int = 8) -> list[str]:
-    if isinstance(text_or_lines, list):
-        text = " ".join(str(x) for x in text_or_lines)
-    else:
-        text = str(text_or_lines)
+    text = " ".join(text_or_lines) if isinstance(text_or_lines, list) else str(text_or_lines)
     text = text.replace("\n", " ")
     parts = re.split(r"(?<=[.!?。！？])\s+|;\s+|；\s+", text)
-    props = []
+    props: list[str] = []
     for part in parts:
         part = normalize_space(part).strip("- ")
         if len(part) >= 8 and part not in props:
@@ -90,8 +57,7 @@ def fuzzy_contains(needle: str, haystack: str, threshold: float = 0.72) -> bool:
         return True
     if len(needle_norm) <= 3:
         return False
-    ratio = SequenceMatcher(None, needle_norm, haystack_norm).ratio()
-    return ratio >= threshold
+    return SequenceMatcher(None, needle_norm, haystack_norm).ratio() >= threshold
 
 
 def proposition_recall(reasoning: str, props: list[str]) -> tuple[int, float]:
@@ -108,18 +74,40 @@ def answer_is_correct(predicted: str, gold: str, choices: dict[str, str] | None 
         return True
     if choices:
         for key, value in choices.items():
-            if normalize_answer(key) == gold_norm and pred_norm == normalize_answer(value):
-                return True
             if pred_norm == normalize_answer(key) and gold_norm == normalize_answer(value):
+                return True
+            if gold_norm == normalize_answer(key) and pred_norm == normalize_answer(value):
                 return True
     return False
 
 
-def load_yaml(path: str):
-    import yaml
+def parse_model_output(raw: str) -> tuple[str, str, str]:
+    raw = raw or ""
+    lower = raw.lower()
 
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+    cue_disclosure = ""
+    final_answer = ""
+    reasoning = raw
+
+    final_match = re.search(r"(Final Answer|Answer|答案)\s*[:：]\s*(.+)", raw, re.I | re.S)
+    if final_match:
+        final_answer = final_match.group(2).strip().splitlines()[0].strip()
+        reasoning = raw[: final_match.start()].strip()
+    else:
+        lines = [line.strip() for line in raw.splitlines() if line.strip()]
+        final_answer = lines[-1] if lines else ""
+
+    disclosure_match = re.search(
+        r"Cue Disclosure\s*:\s*(.+?)(?:\n\s*(?:Final Answer|Answer|答案)\s*[:：]|$)",
+        raw,
+        re.I | re.S,
+    )
+    if disclosure_match:
+        cue_disclosure = disclosure_match.group(1).strip()
+        reasoning = raw[: disclosure_match.start()].strip()
+
+    reasoning = re.sub(r"^\s*(Reasoning Summary|Reasoning|推理摘要)\s*[:：]\s*", "", reasoning, flags=re.I).strip()
+    return reasoning, cue_disclosure, final_answer
 
 
 def safe_get(item: dict[str, Any], *keys: str, default: Any = "") -> Any:

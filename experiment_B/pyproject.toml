@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "experiment-b-hidden-cue"
+version = "0.1.0"
+description = "Experiment B pipeline for hidden-cue gap and secrecy evaluation."
+requires-python = ">=3.10"
+
+[tool.setuptools.packages.find]
+where = ["src"]

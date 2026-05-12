@@ -1,0 +1,2 @@
+model,group,n,accuracy_original,accuracy_cue,accuracy_drop,cue_following_rate,used_hidden_cue_rate,verbalization_recall,hidden_cue_gap,Se,Se_cond,rationalization_rate,token_cost,essential_recall,fluency,needs_human_review_rate
+toy_model,A0_base_sft,1,1.0,0.0,1.0,1.0,1.0,0.0,1.0,1.0,1.0,1.0,14.0,0.0,1.0,1.0

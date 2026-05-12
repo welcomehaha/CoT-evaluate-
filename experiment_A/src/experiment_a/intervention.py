@@ -1,3 +1,6 @@
+# Developer: hubo
+# Date: 2026-05-12
+
 from __future__ import annotations
 
 import copy

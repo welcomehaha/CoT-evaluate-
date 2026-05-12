@@ -1,0 +1,2 @@
+model,group,original_correct_cue_wrong,original_wrong_cue_correct,p_value
+toy_model,A0_base_sft,1,0,1.0

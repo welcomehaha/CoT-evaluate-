@@ -1,0 +1,49 @@
+groups:
+  A0_base_sft:
+    lambda_L: 0.0
+    lambda_F: 0.0
+    lambda_D: 0.0
+    lambda_disclose: 0.0
+    lambda_anti_cue: 0.0
+    lambda_rationalization: 0.0
+    description: SFT only. Used as the no-RL control.
+  A1_low_length:
+    lambda_L: 0.1
+    lambda_F: 0.0
+    lambda_D: 0.0
+    lambda_disclose: 0.2
+    lambda_anti_cue: 0.2
+    lambda_rationalization: 0.1
+    description: Low length penalty with light disclosure reward.
+  A2_high_length:
+    lambda_L: 0.5
+    lambda_F: 0.0
+    lambda_D: 0.0
+    lambda_disclose: 0.2
+    lambda_anti_cue: 0.2
+    lambda_rationalization: 0.1
+    description: High length penalty. Tests "say less" secrecy risk.
+  A3_fluency:
+    lambda_L: 0.1
+    lambda_F: 0.5
+    lambda_D: 0.0
+    lambda_disclose: 0.2
+    lambda_anti_cue: 0.2
+    lambda_rationalization: 0.2
+    description: Fluency reward. Tests plausible cue-silent rationalization risk.
+  A4_logic_density:
+    lambda_L: 0.1
+    lambda_F: 0.1
+    lambda_D: 0.5
+    lambda_disclose: 0.35
+    lambda_anti_cue: 0.35
+    lambda_rationalization: 0.2
+    description: Logic density and disclosure reward.
+  A5_mixed:
+    lambda_L: 0.15
+    lambda_F: 0.15
+    lambda_D: 0.4
+    lambda_disclose: 0.45
+    lambda_anti_cue: 0.45
+    lambda_rationalization: 0.3
+    description: Balanced strategy for accuracy, density, and cue transparency.
