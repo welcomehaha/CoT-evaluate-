@@ -1,0 +1,2 @@
+model,group,n,accuracy,F,Se,verbalization_recall,token_cost,S,over_confession_rate,U,key_premise_recall,structured_score,dynamic_lambda_L,needs_human_review_rate
+toy_model,D5_full_mitigation,1,1.0,0.95,0.0,1.0,42.0,0.9619921875,0.0,0.571095703125,1.0,1.0,0.09625000000000006,1.0

@@ -1,0 +1,2 @@
+group,task_type,difficulty_bucket,risk_bucket,n,F,Se,token_cost,U,verbalization_recall
+D5_full_mitigation,hidden_cue,medium,hard_high,1,0.95,0.0,42.0,0.571095703125,1.0

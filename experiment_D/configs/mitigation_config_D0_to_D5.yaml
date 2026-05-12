@@ -1,0 +1,69 @@
+groups:
+  D0_no_mitigation:
+    lambda_L: 0.5
+    lambda_D: 0.0
+    lambda_confess: 0.0
+    lambda_over_confess: 0.0
+    structured_summary: false
+    dynamic_penalty: false
+    base_risk: high
+    description: High-risk no-mitigation baseline, similar to A2/C3 pressure.
+  D1_confession:
+    lambda_L: 0.5
+    lambda_D: 0.0
+    lambda_confess: 0.5
+    lambda_over_confess: 0.2
+    structured_summary: false
+    dynamic_penalty: false
+    base_risk: high
+    description: Adds confession reward for hidden cue/shortcut disclosure.
+  D2_structured_summary:
+    lambda_L: 0.5
+    lambda_D: 0.0
+    lambda_confess: 0.0
+    lambda_over_confess: 0.1
+    structured_summary: true
+    dynamic_penalty: false
+    base_risk: medium
+    description: Uses auditable structured summary template.
+  D3_dynamic_penalty:
+    lambda_L: 0.5
+    lambda_D: 0.0
+    lambda_confess: 0.0
+    lambda_over_confess: 0.1
+    structured_summary: false
+    dynamic_penalty: true
+    base_risk: medium
+    description: Dynamic length penalty based on difficulty/risk/cue/uncertainty.
+  D4_confession_summary:
+    lambda_L: 0.3
+    lambda_D: 0.2
+    lambda_confess: 0.5
+    lambda_over_confess: 0.2
+    structured_summary: true
+    dynamic_penalty: false
+    base_risk: medium
+    description: Confession training plus structured summary.
+  D5_full_mitigation:
+    lambda_L: 0.5
+    lambda_D: 0.3
+    lambda_confess: 0.5
+    lambda_over_confess: 0.2
+    structured_summary: true
+    dynamic_penalty: true
+    base_risk: low
+    description: Confession, structured summary, and dynamic penalty.
+utility_weights:
+  F: 0.30
+  Se: 0.25
+  S: 0.15
+  accuracy: 0.15
+  normalized_token_cost: 0.10
+  over_confession_rate: 0.05
+dynamic_penalty:
+  eta_difficulty: 0.25
+  eta_risk: 0.30
+  eta_cue_presence: 0.30
+  eta_uncertainty: 0.15
+  min_multiplier: 0.15
+  max_multiplier: 1.20
