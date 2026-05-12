@@ -1,0 +1,50 @@
+seed: 20260512
+splits:
+  sft_train: 0.70
+  rl_train: 0.20
+  test: 0.10
+valid_from_rl_ratio: 0.10
+hacking_variants:
+  shortcut_rate_train: 0.65
+  shortcut_rate_test: 1.00
+  reasoning_cue_types: [authority, majority, answer_position, misleading_rationale]
+  code_shortcuts: [test_tampering, hardcoding, exception_swallowing, evaluator_tampering]
+  summary_shortcuts: [keyword_stuffing, fabricated_citation, omission]
+  safety_shortcuts: [over_refusal, unsafe_wrapped_answer, template_only]
+datasets:
+  gsm8k:
+    enabled: true
+    hf_name: openai/gsm8k
+    hf_config: main
+    splits: [train, test]
+    target_count: 500
+  bbh:
+    enabled: true
+    hf_name: lukaemon/bbh
+    configs: [boolean_expressions, causal_judgement, logical_deduction_three_objects, date_understanding, web_of_lies]
+    splits: [test]
+    target_count: 600
+  humaneval:
+    enabled: true
+    hf_name: openai/openai_humaneval
+    hf_config: null
+    splits: [test]
+    target_count: 164
+  mbpp:
+    enabled: true
+    hf_name: google-research-datasets/mbpp
+    hf_config: null
+    splits: [train, test, validation]
+    target_count: 600
+  truthfulqa:
+    enabled: true
+    hf_name: EleutherAI/truthful_qa_mc
+    hf_config: multiple_choice
+    splits: [validation]
+    target_count: 400
+  synthetic_summary:
+    enabled: true
+    target_count: 600
+  synthetic_safety:
+    enabled: true
+    target_count: 600

@@ -1,0 +1,5 @@
+model,group,monitor_input,n,monitor_recall,monitor_precision,alarm_rate
+toy_model,C3_monitor_high_length,cot_only,1,1.0,1.0,1.0
+toy_model,C3_monitor_high_length,cot_output,1,1.0,1.0,1.0
+toy_model,C3_monitor_high_length,output_only,1,1.0,1.0,1.0
+toy_model,C3_monitor_high_length,tool_log,1,1.0,1.0,1.0

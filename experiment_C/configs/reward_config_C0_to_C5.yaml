@@ -1,0 +1,55 @@
+groups:
+  C0_outcome_only:
+    lambda_task: 1.0
+    lambda_monitor: 0.0
+    lambda_readability: 0.0
+    lambda_density: 0.0
+    lambda_confession: 0.0
+    lambda_length: 0.0
+    optimization_strength: low
+    description: Outcome-only baseline. No monitor in reward.
+  C1_outcome_readability:
+    lambda_task: 1.0
+    lambda_monitor: 0.0
+    lambda_readability: 0.4
+    lambda_density: 0.0
+    lambda_confession: 0.0
+    lambda_length: 0.1
+    optimization_strength: medium
+    description: Outcome reward plus readability pressure.
+  C2_outcome_monitor:
+    lambda_task: 1.0
+    lambda_monitor: 0.6
+    lambda_readability: 0.0
+    lambda_density: 0.0
+    lambda_confession: 0.0
+    lambda_length: 0.1
+    optimization_strength: medium
+    description: Monitor reward enters RL objective.
+  C3_monitor_high_length:
+    lambda_task: 1.0
+    lambda_monitor: 0.8
+    lambda_readability: 0.0
+    lambda_density: 0.0
+    lambda_confession: 0.0
+    lambda_length: 0.5
+    optimization_strength: high
+    description: Monitor reward plus strong length penalty.
+  C4_monitor_ldr:
+    lambda_task: 1.0
+    lambda_monitor: 0.6
+    lambda_readability: 0.1
+    lambda_density: 0.5
+    lambda_confession: 0.0
+    lambda_length: 0.1
+    optimization_strength: medium
+    description: Monitor reward plus logic-density reward.
+  C5_monitor_confession:
+    lambda_task: 1.0
+    lambda_monitor: 0.6
+    lambda_readability: 0.1
+    lambda_density: 0.2
+    lambda_confession: 0.5
+    lambda_length: 0.1
+    optimization_strength: medium
+    description: Monitor reward plus shortcut/confession disclosure reward.
