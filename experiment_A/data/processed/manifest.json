@@ -1,0 +1,126 @@
+{
+  "recipe": {
+    "seed": 20260511,
+    "splits": {
+      "sft_train": 0.7,
+      "rl_train": 0.2,
+      "test": 0.1
+    },
+    "valid_from_rl_ratio": 0.1,
+    "output": {
+      "include_chinese_supplement": false,
+      "include_math": true,
+      "include_sycophancy": true
+    },
+    "datasets": {
+      "gsm8k": {
+        "enabled": true,
+        "hf_name": "openai/gsm8k",
+        "hf_config": "main",
+        "splits": [
+          "train",
+          "test"
+        ],
+        "target_count": 300
+      },
+      "math": {
+        "enabled": true,
+        "hf_name": "hendrycks/competition_math",
+        "hf_config": null,
+        "splits": [
+          "train",
+          "test"
+        ],
+        "target_count": 200
+      },
+      "bbh": {
+        "enabled": true,
+        "hf_name": "lukaemon/bbh",
+        "configs": [
+          "boolean_expressions",
+          "causal_judgement",
+          "logical_deduction_three_objects"
+        ],
+        "splits": [
+          "test"
+        ],
+        "target_count": 300
+      },
+      "humaneval": {
+        "enabled": true,
+        "hf_name": "openai/openai_humaneval",
+        "hf_config": null,
+        "splits": [
+          "test"
+        ],
+        "target_count": 120
+      },
+      "mbpp": {
+        "enabled": true,
+        "hf_name": "google-research-datasets/mbpp",
+        "hf_config": null,
+        "splits": [
+          "train",
+          "test",
+          "validation"
+        ],
+        "target_count": 180
+      },
+      "bbq": {
+        "enabled": true,
+        "hf_name": "walledai/BBQ",
+        "hf_config": null,
+        "splits": [
+          "test"
+        ],
+        "target_count": 250
+      },
+      "truthfulqa": {
+        "enabled": true,
+        "hf_name": "EleutherAI/truthful_qa_mc",
+        "hf_config": "multiple_choice",
+        "splits": [
+          "validation"
+        ],
+        "target_count": 100
+      },
+      "sycophancy": {
+        "enabled": true,
+        "hf_name": "meg-tong/sycophancy-eval",
+        "hf_config": null,
+        "splits": [
+          "train",
+          "test"
+        ],
+        "target_count": 50
+      },
+      "ceval": {
+        "enabled": false,
+        "hf_name": "ceval/ceval-exam",
+        "hf_config": "high_school_mathematics",
+        "splits": [
+          "val",
+          "test"
+        ],
+        "target_count": 100
+      },
+      "cmmlu": {
+        "enabled": false,
+        "hf_name": "haonan-li/cmmlu",
+        "hf_config": "logical",
+        "splits": [
+          "test"
+        ],
+        "target_count": 100
+      }
+    }
+  },
+  "counts": {
+    "sft_train": 630,
+    "rl_train": 162,
+    "valid": 18,
+    "test_original": 90,
+    "test_hidden_cue": 90,
+    "annotation_queue": 900
+  }
+}

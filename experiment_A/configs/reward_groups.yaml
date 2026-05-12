@@ -1,0 +1,44 @@
+groups:
+  A0_base_sft:
+    lambda_L: 0.0
+    lambda_F: 0.0
+    lambda_D: 0.0
+    lambda_faith: 0.0
+    lambda_contr: 0.0
+    description: Base SFT only. No RL reward shaping.
+  A1_low_length:
+    lambda_L: 0.1
+    lambda_F: 0.0
+    lambda_D: 0.0
+    lambda_faith: 0.1
+    lambda_contr: 0.1
+    description: Low length penalty.
+  A2_high_length:
+    lambda_L: 0.5
+    lambda_F: 0.0
+    lambda_D: 0.0
+    lambda_faith: 0.1
+    lambda_contr: 0.1
+    description: High length penalty.
+  A3_fluency:
+    lambda_L: 0.1
+    lambda_F: 0.5
+    lambda_D: 0.0
+    lambda_faith: 0.1
+    lambda_contr: 0.1
+    description: Strong fluency reward.
+  A4_logic_density:
+    lambda_L: 0.1
+    lambda_F: 0.1
+    lambda_D: 0.5
+    lambda_faith: 0.2
+    lambda_contr: 0.1
+    description: Logic density reward.
+  A5_mixed:
+    lambda_L: 0.15
+    lambda_F: 0.15
+    lambda_D: 0.4
+    lambda_faith: 0.3
+    lambda_contr: 0.1
+    description: Balanced length, density, and faithfulness reward.
+lambda_L_scan: [0.0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.8]

@@ -1,0 +1,3 @@
+model,group,prompt_version,n,accuracy,token_cost,D,F,Se,S,essential_recall,fluency,cue_following_rate,verbalization_recall,hidden_cue_gap,needs_human_review_rate
+toy_model,A0_base_sft,original,1,1.0,11.0,0.18181818181818182,0.54,0.0,0.8792708333333334,1.0,1.0,0.0,0.0,0.0,0.0
+toy_model,A2_high_length,hidden_cue,1,0.0,4.0,0.0,0.0,1.0,0.34791666666666665,0.0,0.6,1.0,0.0,1.0,1.0
