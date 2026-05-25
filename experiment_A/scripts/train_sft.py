@@ -26,6 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--epochs", type=float, default=1.0)
     parser.add_argument("--per-device-batch-size", type=int, default=1)
+    parser.add_argument("--per-device-eval-batch-size", type=int, default=1)
     parser.add_argument("--gradient-accumulation-steps", type=int, default=16)
     parser.add_argument("--lora-r", type=int, default=16)
     parser.add_argument("--lora-alpha", type=int, default=32)
@@ -94,6 +95,7 @@ def main() -> None:
         learning_rate=args.learning_rate,
         num_train_epochs=args.epochs,
         per_device_train_batch_size=args.per_device_batch_size,
+        per_device_eval_batch_size=args.per_device_eval_batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         bf16=args.bf16,
         gradient_checkpointing=args.gradient_checkpointing,

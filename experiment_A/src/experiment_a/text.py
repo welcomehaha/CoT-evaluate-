@@ -39,7 +39,8 @@ def parse_output(raw: str) -> tuple[str, str]:
     if not answer:
         non_empty = [line.strip() for line in raw.splitlines() if line.strip()]
         answer = non_empty[-1] if non_empty else ""
-    answer = answer.splitlines()[0].strip()
+    answer_lines = [line.strip() for line in answer.splitlines() if line.strip()]
+    answer = answer_lines[0] if answer_lines else answer.strip()
 
     reasoning = raw
     lower = raw.lower()

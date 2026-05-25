@@ -4,8 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import inspect
+import importlib.metadata
+import importlib.util
 import json
 import sys
+import traceback
 from pathlib import Path
 from typing import Any
 
@@ -21,6 +25,7 @@ from experiment_a.schema import CotSample  # noqa: E402
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="GRPO/RL training for Experiment A.")
     parser.add_argument("--model", required=True, help="A0 SFT checkpoint or base model path.")
+    parser.add_argument("--base-model", default=None, help="Optional local base-model path to use when `--model` points to a PEFT adapter checkpoint.")
     parser.add_argument("--train-file", required=True)
     parser.add_argument("--group", required=True)
     parser.add_argument("--groups-config", default=str(ROOT / "configs" / "reward_groups.yaml"))
@@ -34,7 +39,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--gradient-accumulation-steps", type=int, default=8)
     parser.add_argument("--num-generations", type=int, default=4)
     parser.add_argument("--bf16", action="store_true", default=True)
+    parser.add_argument("--use-qlora", action="store_true", help="Load the base model in 4-bit and attach the SFT LoRA adapter.")
     parser.add_argument("--dry-run-rewards", action="store_true", help="Only verify reward function on gold SFT targets.")
+    parser.add_argument("--debug-grpo-imports", action="store_true", help="Print GRPO/TRL/vLLM import diagnostics before trainer startup.")
     return parser.parse_args()
 
 
@@ -68,6 +75,104 @@ def load_rl_dataset(path: str, template: str):
     return Dataset.from_list(rows)
 
 
+def package_version(name: str) -> str:
+    try:
+        return importlib.metadata.version(name)
+    except importlib.metadata.PackageNotFoundError:
+        return "not-installed"
+    except Exception as exc:
+        return f"error: {exc}"
+
+
+def module_origin(name: str) -> str:
+    try:
+        spec = importlib.util.find_spec(name)
+    except Exception as exc:
+        return f"error: {exc}"
+    if spec is None:
+        return "not-found"
+    if spec.origin:
+        return str(spec.origin)
+    if spec.submodule_search_locations:
+        return ", ".join(str(path) for path in spec.submodule_search_locations)
+    return "built-in"
+
+
+def print_grpo_import_diagnostics() -> None:
+    print("[debug] python executable:", sys.executable)
+    print("[debug] python version:", sys.version.replace("\n", " "))
+    for package in ["torch", "transformers", "trl", "vllm", "vllm-ascend", "accelerate", "peft", "bitsandbytes"]:
+        print(f"[debug] package {package}: {package_version(package)}")
+    for module in ["trl", "trl.extras.vllm_client", "vllm", "vllm_ascend"]:
+        print(f"[debug] module {module}: {module_origin(module)}")
+
+
+def build_grpo_config(GRPOConfig, args: argparse.Namespace):
+    signature = inspect.signature(GRPOConfig.__init__)
+    supported = set(signature.parameters)
+    kwargs = {
+        "output_dir": args.output_dir,
+        "learning_rate": args.learning_rate,
+        "num_train_epochs": args.epochs,
+        "per_device_train_batch_size": args.per_device_batch_size,
+        "gradient_accumulation_steps": args.gradient_accumulation_steps,
+        "num_generations": args.num_generations,
+        "max_completion_length": args.max_completion_length,
+        "bf16": args.bf16,
+        "logging_steps": 10,
+        "save_steps": 200,
+        "save_total_limit": 3,
+        "report_to": "none",
+    }
+    if "max_prompt_length" in supported:
+        kwargs["max_prompt_length"] = args.max_prompt_length
+    else:
+        print(
+            "[compat] GRPOConfig does not accept max_prompt_length; "
+            "prompt truncation will follow the installed TRL version's default behavior."
+        )
+    return GRPOConfig(**kwargs)
+
+
+def resolve_model_for_grpo(args: argparse.Namespace):
+    model_path = Path(args.model)
+    adapter_config = model_path / "adapter_config.json"
+    if not adapter_config.exists():
+        return args.model
+
+    try:
+        import torch
+        from peft import PeftConfig, PeftModel
+        from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+    except Exception as exc:
+        raise SystemExit(f"Missing PEFT model-loading dependencies for adapter checkpoint: {exc}") from exc
+
+    peft_cfg = PeftConfig.from_pretrained(args.model)
+    base_model_name = args.base_model or peft_cfg.base_model_name_or_path
+    print(f"[compat] Detected PEFT adapter checkpoint at {args.model}")
+    print(f"[compat] Loading base model from {base_model_name}")
+
+    quantization_config = None
+    model_kwargs = {
+        "trust_remote_code": True,
+    }
+    if args.use_qlora:
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16 if args.bf16 else torch.float16,
+            bnb_4bit_use_double_quant=True,
+        )
+        model_kwargs["quantization_config"] = quantization_config
+        model_kwargs["device_map"] = "auto"
+        print("[compat] Using 4-bit base-model loading for QLoRA continuation.")
+    elif args.bf16:
+        model_kwargs["torch_dtype"] = torch.bfloat16
+
+    base_model = AutoModelForCausalLM.from_pretrained(base_model_name, **model_kwargs)
+    return PeftModel.from_pretrained(base_model, args.model, is_trainable=True)
+
+
 def main() -> None:
     args = parse_args()
     reward_cfg = load_reward_config(args.groups_config, args.group)
@@ -89,14 +194,23 @@ def main() -> None:
         raise SystemExit("A0_base_sft is SFT-only. Use scripts/train_sft.py instead of RL.")
 
     try:
+        if args.debug_grpo_imports:
+            print_grpo_import_diagnostics()
         from transformers import AutoTokenizer
         from trl import GRPOConfig, GRPOTrainer
     except Exception as exc:
-        raise SystemExit(f"Missing GRPO dependencies. Run `pip install -r requirements.txt`. Details: {exc}") from exc
+        print("[debug] GRPO import failed; full traceback follows:")
+        traceback.print_exc()
+        print("[debug] GRPO import diagnostics after failure:")
+        print_grpo_import_diagnostics()
+        raise SystemExit(
+            f"Missing GRPO dependencies or broken import chain. Run `pip install -r requirements.txt`. Details: {exc}"
+        ) from exc
 
     tokenizer = AutoTokenizer.from_pretrained(args.model, trust_remote_code=True)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
+    model_ref = resolve_model_for_grpo(args)
 
     def reward_func(prompts, completions, sample_json=None, **kwargs):
         if sample_json is None:
@@ -107,24 +221,10 @@ def main() -> None:
             scores.append(compute_reward(completion_to_text(completion), sample, reward_cfg))
         return scores
 
-    train_args = GRPOConfig(
-        output_dir=args.output_dir,
-        learning_rate=args.learning_rate,
-        num_train_epochs=args.epochs,
-        per_device_train_batch_size=args.per_device_batch_size,
-        gradient_accumulation_steps=args.gradient_accumulation_steps,
-        num_generations=args.num_generations,
-        max_prompt_length=args.max_prompt_length,
-        max_completion_length=args.max_completion_length,
-        bf16=args.bf16,
-        logging_steps=10,
-        save_steps=200,
-        save_total_limit=3,
-        report_to="none",
-    )
+    train_args = build_grpo_config(GRPOConfig, args)
 
     trainer = GRPOTrainer(
-        model=args.model,
+        model=model_ref,
         reward_funcs=reward_func,
         args=train_args,
         train_dataset=train_ds,
