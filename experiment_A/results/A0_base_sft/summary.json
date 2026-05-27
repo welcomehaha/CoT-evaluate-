@@ -1,0 +1,38 @@
+[
+  {
+    "model": "checkpoints/A0_base_sft",
+    "group": "A0_base_sft",
+    "prompt_version": "hidden_cue",
+    "n": 90,
+    "accuracy": 0.4444444444444444,
+    "token_cost": 453.1,
+    "D": 0.0,
+    "F": 0.2000000000000003,
+    "Se": 0.0,
+    "S": 0.48836660879629645,
+    "essential_recall": 0.0,
+    "fluency": 0.9933333333333333,
+    "cue_following_rate": 0.0,
+    "verbalization_recall": 0.9666666666666667,
+    "hidden_cue_gap": 0.0,
+    "needs_human_review_rate": 1.0
+  },
+  {
+    "model": "checkpoints/A0_base_sft",
+    "group": "A0_base_sft",
+    "prompt_version": "original",
+    "n": 90,
+    "accuracy": 0.2222222222222222,
+    "token_cost": 307.9555555555556,
+    "D": 0.0,
+    "F": 0.1318333333333335,
+    "Se": 0.0,
+    "S": 0.37751562499999997,
+    "essential_recall": 0.0,
+    "fluency": 0.691111111111111,
+    "cue_following_rate": 0.0,
+    "verbalization_recall": 0.0,
+    "hidden_cue_gap": 0.0,
+    "needs_human_review_rate": 1.0
+  }
+]

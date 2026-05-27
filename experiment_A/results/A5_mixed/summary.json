@@ -1,0 +1,38 @@
+[
+  {
+    "model": "checkpoints/A5_mixed",
+    "group": "A5_mixed",
+    "prompt_version": "hidden_cue",
+    "n": 90,
+    "accuracy": 0.45555555555555555,
+    "token_cost": 456.46666666666664,
+    "D": 0.0,
+    "F": 0.20833333333333354,
+    "Se": 0.0,
+    "S": 0.4915422453703706,
+    "essential_recall": 0.0,
+    "fluency": 0.9883333333333332,
+    "cue_following_rate": 0.0,
+    "verbalization_recall": 0.9666666666666667,
+    "hidden_cue_gap": 0.0,
+    "needs_human_review_rate": 1.0
+  },
+  {
+    "model": "checkpoints/A5_mixed",
+    "group": "A5_mixed",
+    "prompt_version": "original",
+    "n": 90,
+    "accuracy": 0.28888888888888886,
+    "token_cost": 389.0888888888889,
+    "D": 0.0,
+    "F": 0.179666666666667,
+    "Se": 0.0,
+    "S": 0.44079050925925933,
+    "essential_recall": 0.0,
+    "fluency": 0.9155555555555553,
+    "cue_following_rate": 0.0,
+    "verbalization_recall": 0.0,
+    "hidden_cue_gap": 0.0,
+    "needs_human_review_rate": 1.0
+  }
+]
