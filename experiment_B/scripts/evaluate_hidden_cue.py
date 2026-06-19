@@ -4,15 +4,28 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = ROOT.parent
 sys.path.insert(0, str(ROOT / "src"))
 
 from experiment_b.io import iter_jsonl, write_jsonl  # noqa: E402
-from experiment_b.metrics import aggregate, aggregate_by_cue_type, mcnemar_rows, original_key, pair_score, write_csv  # noqa: E402
+from experiment_b.metrics import (  # noqa: E402
+    aggregate,
+    aggregate_by_cue_type,
+    aggregate_with_ci,
+    mcnemar_rows,
+    original_key,
+    pair_score,
+    pairwise_tests,
+    write_csv,
+)
 from experiment_b.schema import HiddenCueSample, ModelOutput  # noqa: E402
 from experiment_b.text import parse_model_output  # noqa: E402
 
@@ -23,6 +36,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--samples-cue", required=True)
     parser.add_argument("--outputs", nargs="+", required=True)
     parser.add_argument("--out-dir", required=True)
+    parser.add_argument("--baseline-group", default="auto")
+    parser.add_argument("--n-boot", type=int, default=2000)
+    parser.add_argument("--seed", type=int, default=20260512)
+    parser.add_argument("--run-name", default=None)
     return parser.parse_args()
 
 
@@ -45,6 +62,10 @@ def tolerant_output(item: dict) -> ModelOutput:
         item.setdefault("reasoning_summary", reasoning)
         item.setdefault("cue_disclosure", disclosure)
         item.setdefault("final_answer", final)
+    metadata = dict(item.get("metadata", {}) or {})
+    for key in ["accuracy_judged", "answer_correct", "used_hidden_cue", "verbalized_hidden_cue", "rationalization"]:
+        if key in item:
+            metadata[key] = item[key]
     return ModelOutput.from_dict(
         {
             "sample_id": item["sample_id"],
@@ -60,9 +81,51 @@ def tolerant_output(item: dict) -> ModelOutput:
             "output_tokens": item.get("output_tokens"),
             "input_tokens": item.get("input_tokens"),
             "latency_s": item.get("latency_s"),
-            "metadata": item.get("metadata", {}),
+            "metadata": metadata,
         }
     )
+
+
+def sha256_file(path: str | Path) -> str:
+    h = hashlib.sha256()
+    with Path(path).open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def git_value(args: list[str]) -> str | None:
+    try:
+        result = subprocess.run(["git", *args], cwd=REPO_ROOT, capture_output=True, text=True, check=False)
+    except Exception:
+        return None
+    return result.stdout.strip() if result.returncode == 0 else None
+
+
+def resolve_baseline(groups: set[str], requested: str) -> str | None:
+    if requested != "auto":
+        return requested if requested in groups else None
+    for candidate in ["Baseline", "A0_base_sft", "base_sft"]:
+        if candidate in groups:
+            return candidate
+    return sorted(groups)[0] if groups else None
+
+
+def write_manifest(path: Path, args: argparse.Namespace, outputs_count: int, metrics_count: int) -> None:
+    input_paths = [args.samples_original, args.samples_cue, *args.outputs]
+    manifest = {
+        "run_name": args.run_name,
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "script": "experiment_B/scripts/evaluate_hidden_cue.py",
+        "git_commit": git_value(["rev-parse", "HEAD"]),
+        "git_dirty": bool(git_value(["status", "--short"])),
+        "inputs": [{"path": str(path), "sha256": sha256_file(path)} for path in input_paths],
+        "outputs_count": outputs_count,
+        "metrics_count": metrics_count,
+        "bootstrap": {"n_boot": args.n_boot, "seed": args.seed},
+        "baseline_group": args.baseline_group,
+    }
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def main() -> None:
@@ -97,14 +160,20 @@ def main() -> None:
 
     per_rows = [metric.to_dict() for metric in metrics]
     summary = aggregate(metrics)
+    summary_ci = aggregate_with_ci(metrics, n_boot=args.n_boot, seed=args.seed)
     cue_type_summary = aggregate_by_cue_type(metrics)
     mcnemar = mcnemar_rows(metrics)
+    baseline_group = resolve_baseline({m.group for m in metrics}, args.baseline_group)
+    comparisons = pairwise_tests(metrics, baseline_group, n_boot=args.n_boot, seed=args.seed) if baseline_group else []
 
     write_jsonl(out_dir / "per_sample_hidden_cue_metrics.jsonl", per_rows)
     write_csv(out_dir / "eval_hidden_cue_metrics.csv", summary)
+    write_csv(out_dir / "eval_hidden_cue_metrics_with_ci.csv", summary_ci)
+    write_csv(out_dir / "pairwise_tests.csv", comparisons)
     write_csv(out_dir / "cue_type_metrics.csv", cue_type_summary)
     write_csv(out_dir / "mcnemar_by_group.csv", mcnemar)
     (out_dir / "eval_hidden_cue_metrics.json").write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding="utf-8")
+    write_manifest(out_dir / "run_manifest.json", args, outputs_count=len(outputs), metrics_count=len(metrics))
     print(f"[eval-B] wrote {len(per_rows)} per-sample metrics")
     print(f"[eval-B] wrote summary to {out_dir / 'eval_hidden_cue_metrics.csv'}")
 

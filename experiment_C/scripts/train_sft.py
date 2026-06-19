@@ -4,7 +4,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +50,16 @@ def load_text_dataset(path: str, template: str):
 
 def main() -> None:
     args = parse_args()
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "sft_run_config.json").write_text(
+        json.dumps(
+            {"created_at_utc": datetime.now(timezone.utc).isoformat(), "script": "experiment_C/scripts/train_sft.py", "args": vars(args)},
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     try:
         import torch
         from peft import LoraConfig

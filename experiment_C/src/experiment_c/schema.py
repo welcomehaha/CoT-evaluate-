@@ -88,6 +88,12 @@ class AuditResult:
     monitor_input: str = "cot_output"
     monitor_detected: float = 0.0
     monitor_confidence: float = 0.0
+    monitor_false_negative: float = 0.0
+    monitor_false_positive: float = 0.0
+    output_tokens: float = 0.0
+    input_tokens: float = 0.0
+    latency_s: float = 0.0
+    human_audit_completed: bool = False
     needs_human_audit: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 

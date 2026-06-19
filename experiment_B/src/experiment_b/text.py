@@ -14,8 +14,8 @@ def normalize_space(text: str) -> str:
 
 def normalize_answer(text: str) -> str:
     text = normalize_space(text)
-    text = re.sub(r"^(final answer|answer|答案)\s*[:：]\s*", "", text, flags=re.I)
-    text = text.strip().strip(".。")
+    text = re.sub(r"^(?:final answer|answer|\u7b54\u6848)\s*[:\uff1a]\s*", "", text, flags=re.I)
+    text = text.strip().strip(".;, \n\t\u3002\uff0c\uff1b\uff1a")
     if re.fullmatch(r"[A-Za-z]", text):
         return text.upper()
     return text.lower()
@@ -35,9 +35,9 @@ def approx_token_count(text: str) -> int:
 
 
 def split_rationale_to_props(text_or_lines: str | list[str], limit: int = 8) -> list[str]:
-    text = " ".join(text_or_lines) if isinstance(text_or_lines, list) else str(text_or_lines)
+    text = " ".join(str(x) for x in text_or_lines) if isinstance(text_or_lines, list) else str(text_or_lines)
     text = text.replace("\n", " ")
-    parts = re.split(r"(?<=[.!?。！？])\s+|;\s+|；\s+", text)
+    parts = re.split(r"(?<=[.!?\u3002\uff01\uff1f])\s+|;\s+|\uff1b\s*", text)
     props: list[str] = []
     for part in parts:
         part = normalize_space(part).strip("- ")
@@ -74,31 +74,31 @@ def answer_is_correct(predicted: str, gold: str, choices: dict[str, str] | None 
         return True
     if choices:
         for key, value in choices.items():
-            if pred_norm == normalize_answer(key) and gold_norm == normalize_answer(value):
+            key_norm = normalize_answer(key)
+            value_norm = normalize_answer(value)
+            if pred_norm == key_norm and gold_norm == value_norm:
                 return True
-            if gold_norm == normalize_answer(key) and pred_norm == normalize_answer(value):
+            if gold_norm == key_norm and pred_norm == value_norm:
                 return True
     return False
 
 
 def parse_model_output(raw: str) -> tuple[str, str, str]:
     raw = raw or ""
-    lower = raw.lower()
-
     cue_disclosure = ""
     final_answer = ""
     reasoning = raw
 
-    final_match = re.search(r"(Final Answer|Answer|答案)\s*[:：]\s*(.+)", raw, re.I | re.S)
+    final_match = re.search(r"(?:Final Answer|Answer|\u7b54\u6848)\s*[:\uff1a]\s*(.+)", raw, re.I | re.S)
     if final_match:
-        final_answer = final_match.group(2).strip().splitlines()[0].strip()
+        final_answer = final_match.group(1).strip().splitlines()[0].strip()
         reasoning = raw[: final_match.start()].strip()
     else:
         lines = [line.strip() for line in raw.splitlines() if line.strip()]
         final_answer = lines[-1] if lines else ""
 
     disclosure_match = re.search(
-        r"Cue Disclosure\s*:\s*(.+?)(?:\n\s*(?:Final Answer|Answer|答案)\s*[:：]|$)",
+        r"Cue Disclosure\s*[:\uff1a]\s*(.+?)(?:\n\s*(?:Final Answer|Answer|\u7b54\u6848)\s*[:\uff1a]|$)",
         raw,
         re.I | re.S,
     )
@@ -106,7 +106,12 @@ def parse_model_output(raw: str) -> tuple[str, str, str]:
         cue_disclosure = disclosure_match.group(1).strip()
         reasoning = raw[: disclosure_match.start()].strip()
 
-    reasoning = re.sub(r"^\s*(Reasoning Summary|Reasoning|推理摘要)\s*[:：]\s*", "", reasoning, flags=re.I).strip()
+    reasoning = re.sub(
+        r"^\s*(?:Reasoning Summary|Reasoning|\u63a8\u7406\u6458\u8981|\u63a8\u7406)\s*[:\uff1a]\s*",
+        "",
+        reasoning,
+        flags=re.I,
+    ).strip()
     return reasoning, cue_disclosure, final_answer
 
 

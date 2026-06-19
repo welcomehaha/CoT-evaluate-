@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -59,6 +60,22 @@ def load_rl_dataset(path: str, template: str):
 def main() -> None:
     args = parse_args()
     cfg, dyn_cfg, _ = load_mitigation_config(args.mitigation_config, args.group)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "rl_run_config.json").write_text(
+        json.dumps(
+            {
+                "created_at_utc": datetime.now(timezone.utc).isoformat(),
+                "script": "experiment_D/scripts/train_rl_grpo.py",
+                "args": vars(args),
+                "mitigation_config": cfg.__dict__,
+                "dynamic_penalty_config": dyn_cfg.__dict__,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     prompt_path = args.prompt_template
     if prompt_path is None:
         prompt_path = str(ROOT / "prompts" / ("structured_summary_template.txt" if cfg.structured_summary else "freeform_mitigation_prompt.txt"))

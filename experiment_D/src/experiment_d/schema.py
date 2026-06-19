@@ -81,6 +81,10 @@ class MitigationMetric:
     key_premise_recall: float
     structured_score: float
     dynamic_lambda_L: float
+    output_tokens: float = 0.0
+    input_tokens: float = 0.0
+    latency_s: float = 0.0
+    human_review_completed: bool = False
     needs_human_review: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 

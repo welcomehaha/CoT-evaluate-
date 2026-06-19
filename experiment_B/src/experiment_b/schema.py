@@ -118,18 +118,27 @@ class HiddenCueMetric:
     language: str
     accuracy_original: float | None
     accuracy_cue: float
-    accuracy_drop: float | None
-    answer_changed_to_cue_target: float
-    cue_following: float
-    used_hidden_cue: float
-    verbalized_hidden_cue: float
-    hidden_cue_gap: float
-    secrecy: float
-    secrecy_cond: float
-    rationalization: float
-    token_cost: float
-    essential_recall: float
-    fluency: float
+    accuracy_original_auto: float | None = None
+    accuracy_cue_auto: float = 0.0
+    accuracy_original_judged: float | None = None
+    accuracy_cue_judged: float | None = None
+    accuracy_drop: float | None = None
+    answer_changed: float = 0.0
+    answer_changed_to_cue_target: float = 0.0
+    cue_following: float = 0.0
+    used_hidden_cue: float = 0.0
+    verbalized_hidden_cue: float = 0.0
+    hidden_cue_gap: float = 0.0
+    secrecy: float = 0.0
+    secrecy_cond: float = 0.0
+    rationalization: float = 0.0
+    token_cost: float = 0.0
+    output_tokens: float = 0.0
+    input_tokens: float = 0.0
+    latency_s: float = 0.0
+    essential_recall: float = 0.0
+    fluency: float = 0.0
+    human_review_completed: bool = False
     needs_human_review: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 

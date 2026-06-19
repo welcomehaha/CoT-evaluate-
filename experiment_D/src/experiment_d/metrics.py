@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import csv
+import random
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,7 @@ from typing import Any
 from .dynamic_penalty import DynamicPenaltyConfig
 from .rewards import MitigationConfig, score_components
 from .schema import MitigationMetric, MitigationSample, ModelOutput
+from .text import approx_token_count
 
 
 DEFAULT_U_WEIGHTS = {
@@ -21,6 +23,36 @@ DEFAULT_U_WEIGHTS = {
     "normalized_token_cost": 0.10,
     "over_confession_rate": 0.05,
 }
+
+SUMMARY_CI_METRICS = [
+    "accuracy",
+    "F",
+    "Se",
+    "verbalization_recall",
+    "token_cost",
+    "S",
+    "over_confession",
+    "U",
+    "key_premise_recall",
+    "structured_score",
+    "dynamic_lambda_L",
+]
+
+
+def mean(values: list[float]) -> float:
+    return sum(values) / max(1, len(values))
+
+
+def bootstrap_ci(values: list[float], n_boot: int = 2000, seed: int = 20260514) -> tuple[float, float, float]:
+    if not values:
+        return 0.0, 0.0, 0.0
+    rng = random.Random(seed)
+    means = []
+    for _ in range(n_boot):
+        sample = [values[rng.randrange(len(values))] for _ in range(len(values))]
+        means.append(mean(sample))
+    means.sort()
+    return mean(values), means[int(0.025 * (len(means) - 1))], means[int(0.975 * (len(means) - 1))]
 
 
 def utility(parts: dict[str, float], weights: dict[str, float] | None = None) -> float:
@@ -70,6 +102,10 @@ def score_output(
         key_premise_recall=parts["key_premise_recall"],
         structured_score=parts["structured_score"],
         dynamic_lambda_L=parts["dynamic_lambda_L"],
+        output_tokens=float(output.output_tokens if output.output_tokens is not None else approx_token_count(output.raw_output)),
+        input_tokens=float(output.input_tokens or 0),
+        latency_s=float(output.latency_s or 0),
+        human_review_completed=bool((sample.metadata or {}).get("human_reviewed") or (output.metadata or {}).get("human_reviewed")),
         needs_human_review=list(sample.needs_human_review),
         metadata={"cue_target": sample.cue_target, "gold_answer": sample.gold_answer},
     )
@@ -93,6 +129,8 @@ def aggregate(metrics: list[MitigationMetric]) -> list[dict[str, Any]]:
                 "Se": sum(m.Se for m in hidden) / max(1, len(hidden)),
                 "verbalization_recall": sum(m.verbalization_recall for m in hidden) / max(1, len(hidden)),
                 "token_cost": sum(m.token_cost for m in items) / d,
+                "output_tokens": sum(m.output_tokens for m in items) / d,
+                "latency_s": sum(m.latency_s for m in items) / d,
                 "S": sum(m.S for m in items) / d,
                 "over_confession_rate": sum(m.over_confession for m in items) / d,
                 "U": sum(m.U for m in items) / d,
@@ -100,8 +138,85 @@ def aggregate(metrics: list[MitigationMetric]) -> list[dict[str, Any]]:
                 "structured_score": sum(m.structured_score for m in items) / d,
                 "dynamic_lambda_L": sum(m.dynamic_lambda_L for m in items) / d,
                 "needs_human_review_rate": sum(1 for m in items if m.needs_human_review) / d,
+                "human_review_completed_rate": sum(1 for m in items if m.human_review_completed) / d,
+                "human_review_pending_rate": sum(1 for m in items if m.needs_human_review and not m.human_review_completed) / d,
             }
         )
+    return rows
+
+
+def aggregate_with_ci(metrics: list[MitigationMetric], n_boot: int = 2000, seed: int = 20260514) -> list[dict[str, Any]]:
+    grouped: dict[tuple[str, str], list[MitigationMetric]] = defaultdict(list)
+    for metric in metrics:
+        grouped[(metric.model, metric.group)].append(metric)
+    rows = []
+    for (model, group), items in sorted(grouped.items()):
+        for metric_name in SUMMARY_CI_METRICS:
+            values = [float(getattr(item, metric_name)) for item in items]
+            mean_v, low, high = bootstrap_ci(values, n_boot=n_boot, seed=seed)
+            rows.append(
+                {
+                    "model": model,
+                    "group": group,
+                    "metric": metric_name,
+                    "n": len(values),
+                    "mean": mean_v,
+                    "ci_low": low,
+                    "ci_high": high,
+                    "n_boot": n_boot,
+                }
+            )
+    return rows
+
+
+def _bootstrap_diff(treatment: list[float], baseline: list[float], n_boot: int, seed: int) -> tuple[float, float, float, float]:
+    if not treatment or not baseline:
+        return 0.0, 0.0, 0.0, 1.0
+    observed = mean(treatment) - mean(baseline)
+    rng = random.Random(seed)
+    diffs = []
+    for _ in range(n_boot):
+        t = [treatment[rng.randrange(len(treatment))] for _ in range(len(treatment))]
+        b = [baseline[rng.randrange(len(baseline))] for _ in range(len(baseline))]
+        diffs.append(mean(t) - mean(b))
+    diffs.sort()
+    low = diffs[int(0.025 * (len(diffs) - 1))]
+    high = diffs[int(0.975 * (len(diffs) - 1))]
+    p_value = min(1.0, 2.0 * min(sum(d <= 0 for d in diffs) / len(diffs), sum(d >= 0 for d in diffs) / len(diffs)))
+    return observed, low, high, p_value
+
+
+def pairwise_tests(
+    metrics: list[MitigationMetric],
+    baseline_group: str,
+    n_boot: int = 2000,
+    seed: int = 20260514,
+) -> list[dict[str, Any]]:
+    by_group: dict[str, list[MitigationMetric]] = defaultdict(list)
+    for metric in metrics:
+        by_group[metric.group].append(metric)
+    baseline_items = by_group.get(baseline_group, [])
+    rows = []
+    for group, items in sorted(by_group.items()):
+        if group == baseline_group or not baseline_items:
+            continue
+        for metric_name in SUMMARY_CI_METRICS:
+            treatment = [float(getattr(item, metric_name)) for item in items]
+            baseline = [float(getattr(item, metric_name)) for item in baseline_items]
+            diff, low, high, p_value = _bootstrap_diff(treatment, baseline, n_boot, seed)
+            rows.append(
+                {
+                    "baseline_group": baseline_group,
+                    "group": group,
+                    "metric": metric_name,
+                    "n_treatment": len(treatment),
+                    "n_baseline": len(baseline),
+                    "diff_vs_baseline": diff,
+                    "ci_low": low,
+                    "ci_high": high,
+                    "p_bootstrap": p_value,
+                }
+            )
     return rows
 
 
