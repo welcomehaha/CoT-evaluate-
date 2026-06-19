@@ -9,9 +9,8 @@ from typing import Any
 
 
 FINAL_PATTERNS = [
-    re.compile(r"Final Answer\s*:\s*(.+)", re.IGNORECASE | re.DOTALL),
-    re.compile(r"Answer\s*:\s*(.+)", re.IGNORECASE | re.DOTALL),
-    re.compile(r"答案\s*[:：]\s*(.+)", re.IGNORECASE | re.DOTALL),
+    re.compile(r"(?:Final Answer|Answer|\u7b54\u6848)\s*[:\uff1a]\s*(.+)", re.IGNORECASE | re.DOTALL),
+    re.compile(r"(?:The answer is)\s+(.+)", re.IGNORECASE | re.DOTALL),
 ]
 
 
@@ -21,8 +20,8 @@ def normalize_space(text: str) -> str:
 
 def normalize_answer(text: str) -> str:
     text = normalize_space(text).strip()
-    text = re.sub(r"^(final answer|answer|答案)\s*[:：]\s*", "", text, flags=re.I)
-    text = text.strip().strip(".。")
+    text = re.sub(r"^(?:final answer|answer|\u7b54\u6848)\s*[:\uff1a]\s*", "", text, flags=re.I)
+    text = text.strip().strip(".;, \n\t\u3002\uff0c\uff1b\uff1a")
     if re.fullmatch(r"[A-Za-z]", text):
         return text.upper()
     return text.lower()
@@ -43,10 +42,16 @@ def parse_output(raw: str) -> tuple[str, str]:
 
     reasoning = raw
     lower = raw.lower()
-    idx = lower.find("final answer")
-    if idx >= 0:
-        reasoning = raw[:idx]
-    reasoning = re.sub(r"^\s*(Reasoning|Reasoning Summary)\s*:\s*", "", reasoning, flags=re.I)
+    markers = ["final answer", "answer:", "\u7b54\u6848"]
+    marker_positions = [lower.find(marker) for marker in markers if lower.find(marker) >= 0]
+    if marker_positions:
+        reasoning = raw[: min(marker_positions)]
+    reasoning = re.sub(
+        r"^\s*(?:Reasoning|Reasoning Summary|\u63a8\u7406|\u63a8\u7406\u6458\u8981)\s*[:\uff1a]\s*",
+        "",
+        reasoning,
+        flags=re.I,
+    )
     return reasoning.strip(), answer.strip()
 
 
@@ -60,8 +65,8 @@ def approx_token_count(text: str) -> int:
     text = str(text)
     if not text.strip():
         return 0
-    ascii_words = re.findall(r"[A-Za-z0-9_]+|[^\sA-Za-z0-9_]", text)
-    return max(1, len(ascii_words))
+    tokens = re.findall(r"[A-Za-z0-9_]+|[^\sA-Za-z0-9_]", text)
+    return max(1, len(tokens))
 
 
 def split_rationale_to_props(text_or_lines: str | list[str], limit: int = 8) -> list[str]:
@@ -70,7 +75,7 @@ def split_rationale_to_props(text_or_lines: str | list[str], limit: int = 8) -> 
     else:
         text = str(text_or_lines)
     text = text.replace("\n", " ")
-    parts = re.split(r"(?<=[.!?。！？])\s+|;\s+|；\s+", text)
+    parts = re.split(r"(?<=[.!?\u3002\uff01\uff1f])\s+|;\s+|\uff1b\s*", text)
     props = []
     for part in parts:
         part = normalize_space(part).strip("- ")
@@ -108,9 +113,11 @@ def answer_is_correct(predicted: str, gold: str, choices: dict[str, str] | None 
         return True
     if choices:
         for key, value in choices.items():
-            if normalize_answer(key) == gold_norm and pred_norm == normalize_answer(value):
+            key_norm = normalize_answer(key)
+            value_norm = normalize_answer(value)
+            if key_norm == gold_norm and pred_norm == value_norm:
                 return True
-            if pred_norm == normalize_answer(key) and gold_norm == normalize_answer(value):
+            if pred_norm == key_norm and gold_norm == value_norm:
                 return True
     return False
 

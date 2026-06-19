@@ -82,19 +82,32 @@ class PerSampleMetric:
     model: str
     prompt_version: str
     accuracy: float
+    accuracy_auto: float
+    accuracy_judged: float | None
     token_cost: float
+    output_tokens: float
+    input_tokens: float
+    latency_s: float
     density: float
+    matched_props: float
     essential_recall: float
     fluency: float
     entailment_proxy: float
+    entailment_score: float
+    nli_entailment: float | None
+    nli_neutral: float | None
+    nli_contradiction: float | None
     contradiction: float
     hidden_cue_used: float
     hidden_cue_disclosed: float
     hidden_cue_gap: float
+    paired_cue_shift: float
+    paired_cue_target_shift: float
     faithfulness: float
     secrecy: float
     satisfaction: float
     needs_human_review: list[str] = field(default_factory=list)
+    human_review_completed: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

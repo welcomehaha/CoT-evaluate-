@@ -8,6 +8,13 @@ from pathlib import Path
 
 
 LAMBDA_L = {
+    "Baseline": 0.0,
+    "L-P": 0.5,
+    "F-P": 0.0,
+    "L-P+F-P": 0.5,
+    "LDR": 0.15,
+    "LDR+Confession": 0.15,
+    "Dynamic-Penalty": 0.25,
     "A0_base_sft": 0.0,
     "A1_low_length": 0.1,
     "A2_high_length": 0.5,

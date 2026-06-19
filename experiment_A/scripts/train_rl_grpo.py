@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -71,6 +72,21 @@ def load_rl_dataset(path: str, template: str):
 def main() -> None:
     args = parse_args()
     reward_cfg = load_reward_config(args.groups_config, args.group)
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "rl_run_config.json").write_text(
+        json.dumps(
+            {
+                "created_at_utc": datetime.now(timezone.utc).isoformat(),
+                "script": "experiment_A/scripts/train_rl_grpo.py",
+                "args": vars(args),
+                "reward_config": reward_cfg.__dict__,
+            },
+            ensure_ascii=False,
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
     template = load_prompt_template(args.prompt_template)
     train_ds = load_rl_dataset(args.train_file, template)
 

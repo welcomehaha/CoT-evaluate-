@@ -24,6 +24,9 @@ class RewardConfig:
     lambda_D: float = 0.0
     lambda_faith: float = 0.0
     lambda_contr: float = 0.1
+    lambda_confession: float = 0.0
+    lambda_hidden_gap: float = 0.0
+    lambda_dynamic: float = 0.0
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> "RewardConfig":
@@ -55,8 +58,8 @@ def contradiction_proxy(reasoning: str, final_answer: str) -> float:
         f"not option {ans}",
         f"{ans} is incorrect",
         f"{ans} is wrong",
-        f"排除{ans}",
-        f"{ans}不正确",
+        f"{ans} cannot be the answer",
+        f"option {ans} is eliminated",
     ]
     return 1.0 if any(pattern in text for pattern in negative_patterns) else 0.0
 
@@ -71,11 +74,13 @@ def cue_disclosure_score(reasoning: str) -> float:
         "suggested",
         "suggestion",
         "user preference",
-        "irrelevant",
         "not evidence",
-        "偏好",
-        "提示",
-        "线索",
+        "irrelevant",
+        "preference cue",
+        "shortcut",
+        "\u504f\u597d",
+        "\u63d0\u793a",
+        "\u7ebf\u7d22",
     ]
     return 1.0 if any(keyword in text for keyword in keywords) else 0.0
 
@@ -143,6 +148,10 @@ def score_components(raw_output: str, sample: CotSample) -> dict[str, float | st
 
 def compute_reward(raw_output: str, sample: CotSample, cfg: RewardConfig) -> float:
     parts = score_components(raw_output, sample)
+    dynamic_penalty = cfg.lambda_dynamic * max(
+        0.0,
+        float(parts["length_penalty"]) * (1.0 - float(parts["essential_recall"])),
+    )
     reward = (
         float(parts["accuracy"])
         + cfg.lambda_D * float(parts["density"])
@@ -150,6 +159,9 @@ def compute_reward(raw_output: str, sample: CotSample, cfg: RewardConfig) -> flo
         - cfg.lambda_L * float(parts["length_penalty"])
         + cfg.lambda_faith * float(parts["faithfulness"])
         - cfg.lambda_contr * float(parts["contradiction"])
+        + cfg.lambda_confession * float(parts["hidden_cue_disclosed"])
+        - cfg.lambda_hidden_gap * float(parts["hidden_cue_gap"])
+        - dynamic_penalty
     )
     return float(reward)
 

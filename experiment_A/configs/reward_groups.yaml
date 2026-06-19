@@ -1,44 +1,135 @@
 groups:
+  # Paper-facing arms. Use these names when generating final tables.
+  Baseline:
+    lambda_L: 0.0
+    lambda_F: 0.0
+    lambda_D: 0.0
+    lambda_faith: 0.0
+    lambda_contr: 0.0
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.0
+    lambda_dynamic: 0.0
+    description: Base SFT checkpoint without RL reward shaping.
+  L-P:
+    lambda_L: 0.5
+    lambda_F: 0.0
+    lambda_D: 0.0
+    lambda_faith: 0.1
+    lambda_contr: 0.1
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.0
+    lambda_dynamic: 0.0
+    description: Length-penalty arm that rewards shorter visible reasoning.
+  F-P:
+    lambda_L: 0.0
+    lambda_F: 0.5
+    lambda_D: 0.0
+    lambda_faith: 0.1
+    lambda_contr: 0.1
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.0
+    lambda_dynamic: 0.0
+    description: Fluency-preference arm that rewards smooth and readable visible reasoning.
+  L-P+F-P:
+    lambda_L: 0.5
+    lambda_F: 0.5
+    lambda_D: 0.0
+    lambda_faith: 0.1
+    lambda_contr: 0.1
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.0
+    lambda_dynamic: 0.0
+    description: Combined length-penalty and fluency-preference arm.
+  LDR:
+    lambda_L: 0.15
+    lambda_F: 0.1
+    lambda_D: 0.5
+    lambda_faith: 0.3
+    lambda_contr: 0.1
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.1
+    lambda_dynamic: 0.0
+    description: Logic-density regularization arm.
+  LDR+Confession:
+    lambda_L: 0.15
+    lambda_F: 0.1
+    lambda_D: 0.5
+    lambda_faith: 0.3
+    lambda_contr: 0.1
+    lambda_confession: 0.2
+    lambda_hidden_gap: 0.2
+    lambda_dynamic: 0.0
+    description: LDR with explicit reward for disclosing non-evidential cues or shortcuts.
+  Dynamic-Penalty:
+    lambda_L: 0.25
+    lambda_F: 0.1
+    lambda_D: 0.4
+    lambda_faith: 0.3
+    lambda_contr: 0.1
+    lambda_confession: 0.2
+    lambda_hidden_gap: 0.25
+    lambda_dynamic: 0.5
+    description: Dynamic penalty that discourages short traces when essential-proposition recall is low.
+
+  # Backward-compatible aliases used by early Experiment A runs.
   A0_base_sft:
     lambda_L: 0.0
     lambda_F: 0.0
     lambda_D: 0.0
     lambda_faith: 0.0
     lambda_contr: 0.0
-    description: Base SFT only. No RL reward shaping.
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.0
+    lambda_dynamic: 0.0
+    description: Alias of Baseline.
   A1_low_length:
     lambda_L: 0.1
     lambda_F: 0.0
     lambda_D: 0.0
     lambda_faith: 0.1
     lambda_contr: 0.1
-    description: Low length penalty.
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.0
+    lambda_dynamic: 0.0
+    description: Low length-penalty diagnostic arm.
   A2_high_length:
     lambda_L: 0.5
     lambda_F: 0.0
     lambda_D: 0.0
     lambda_faith: 0.1
     lambda_contr: 0.1
-    description: High length penalty.
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.0
+    lambda_dynamic: 0.0
+    description: Alias-like diagnostic arm for L-P.
   A3_fluency:
     lambda_L: 0.1
     lambda_F: 0.5
     lambda_D: 0.0
     lambda_faith: 0.1
     lambda_contr: 0.1
-    description: Strong fluency reward.
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.0
+    lambda_dynamic: 0.0
+    description: Diagnostic arm for fluency preference.
   A4_logic_density:
     lambda_L: 0.1
     lambda_F: 0.1
     lambda_D: 0.5
     lambda_faith: 0.2
     lambda_contr: 0.1
-    description: Logic density reward.
+    lambda_confession: 0.0
+    lambda_hidden_gap: 0.1
+    lambda_dynamic: 0.0
+    description: Diagnostic arm for logic density.
   A5_mixed:
     lambda_L: 0.15
     lambda_F: 0.15
     lambda_D: 0.4
     lambda_faith: 0.3
     lambda_contr: 0.1
-    description: Balanced length, density, and faithfulness reward.
+    lambda_confession: 0.1
+    lambda_hidden_gap: 0.1
+    lambda_dynamic: 0.0
+    description: Balanced early-run arm.
 lambda_L_scan: [0.0, 0.05, 0.1, 0.2, 0.3, 0.5, 0.8]
